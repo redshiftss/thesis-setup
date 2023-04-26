@@ -1,0 +1,1 @@
+docker ps --format "{{.Ports}}" | awk -F '->' '{print $1}'

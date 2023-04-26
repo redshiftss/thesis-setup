@@ -1,0 +1,210 @@
+{
+  "Id": "7c84b8941325b3e242312821eeb9cbb7771d387f54e80576ef7c803badbd9e5c",
+  "Created": "2023-04-24T16:38:11.869927851Z",
+  "Path": "/whoami",
+  "Args": [],
+  "State": {
+    "Status": "running",
+    "Running": true,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 22469,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2023-04-24T16:38:12.188196618Z",
+    "FinishedAt": "0001-01-01T00:00:00Z"
+  },
+  "Image": "sha256:afdc71e6e67e5b8f92d7ef63e67c98bddcb195722efecb5b4a5f95826c44bd1f",
+  "ResolvConfPath": "/var/lib/docker/containers/7c84b8941325b3e242312821eeb9cbb7771d387f54e80576ef7c803badbd9e5c/resolv.conf",
+  "HostnamePath": "/var/lib/docker/containers/7c84b8941325b3e242312821eeb9cbb7771d387f54e80576ef7c803badbd9e5c/hostname",
+  "HostsPath": "/var/lib/docker/containers/7c84b8941325b3e242312821eeb9cbb7771d387f54e80576ef7c803badbd9e5c/hosts",
+  "LogPath": "/var/lib/docker/containers/7c84b8941325b3e242312821eeb9cbb7771d387f54e80576ef7c803badbd9e5c/7c84b8941325b3e242312821eeb9cbb7771d387f54e80576ef7c803badbd9e5c-json.log",
+  "Name": "/whoami",
+  "RestartCount": 0,
+  "Driver": "btrfs",
+  "Platform": "linux",
+  "MountLabel": "",
+  "ProcessLabel": "",
+  "AppArmorProfile": "",
+  "ExecIDs": null,
+  "HostConfig": {
+    "Binds": null,
+    "ContainerIDFile": "",
+    "LogConfig": {
+      "Type": "json-file",
+      "Config": {}
+    },
+    "NetworkMode": "default",
+    "PortBindings": {},
+    "RestartPolicy": {
+      "Name": "no",
+      "MaximumRetryCount": 0
+    },
+    "AutoRemove": false,
+    "VolumeDriver": "",
+    "VolumesFrom": null,
+    "ConsoleSize": [
+      37,
+      71
+    ],
+    "CapAdd": null,
+    "CapDrop": null,
+    "CgroupnsMode": "private",
+    "Dns": [],
+    "DnsOptions": [],
+    "DnsSearch": [],
+    "ExtraHosts": null,
+    "GroupAdd": null,
+    "IpcMode": "private",
+    "Cgroup": "",
+    "Links": null,
+    "OomScoreAdj": 0,
+    "PidMode": "",
+    "Privileged": false,
+    "PublishAllPorts": true,
+    "ReadonlyRootfs": false,
+    "SecurityOpt": null,
+    "UTSMode": "",
+    "UsernsMode": "",
+    "ShmSize": 67108864,
+    "Runtime": "runc",
+    "Isolation": "",
+    "CpuShares": 0,
+    "Memory": 0,
+    "NanoCpus": 0,
+    "CgroupParent": "",
+    "BlkioWeight": 0,
+    "BlkioWeightDevice": [],
+    "BlkioDeviceReadBps": [],
+    "BlkioDeviceWriteBps": [],
+    "BlkioDeviceReadIOps": [],
+    "BlkioDeviceWriteIOps": [],
+    "CpuPeriod": 0,
+    "CpuQuota": 0,
+    "CpuRealtimePeriod": 0,
+    "CpuRealtimeRuntime": 0,
+    "CpusetCpus": "",
+    "CpusetMems": "",
+    "Devices": [],
+    "DeviceCgroupRules": null,
+    "DeviceRequests": null,
+    "MemoryReservation": 0,
+    "MemorySwap": 0,
+    "MemorySwappiness": null,
+    "OomKillDisable": null,
+    "PidsLimit": null,
+    "Ulimits": null,
+    "CpuCount": 0,
+    "CpuPercent": 0,
+    "IOMaximumIOps": 0,
+    "IOMaximumBandwidth": 0,
+    "MaskedPaths": [
+      "/proc/asound",
+      "/proc/acpi",
+      "/proc/kcore",
+      "/proc/keys",
+      "/proc/latency_stats",
+      "/proc/timer_list",
+      "/proc/timer_stats",
+      "/proc/sched_debug",
+      "/proc/scsi",
+      "/sys/firmware"
+    ],
+    "ReadonlyPaths": [
+      "/proc/bus",
+      "/proc/fs",
+      "/proc/irq",
+      "/proc/sys",
+      "/proc/sysrq-trigger"
+    ]
+  },
+  "GraphDriver": {
+    "Data": null,
+    "Name": "btrfs"
+  },
+  "Mounts": [],
+  "Config": {
+    "Hostname": "7c84b8941325",
+    "Domainname": "",
+    "User": "",
+    "AttachStdin": false,
+    "AttachStdout": false,
+    "AttachStderr": false,
+    "ExposedPorts": {
+      "80/tcp": {}
+    },
+    "Tty": false,
+    "OpenStdin": false,
+    "StdinOnce": false,
+    "Env": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ],
+    "Cmd": null,
+    "Image": "traefik/whoami",
+    "Volumes": null,
+    "WorkingDir": "/",
+    "Entrypoint": [
+      "/whoami"
+    ],
+    "OnBuild": null,
+    "Labels": {
+      "org.opencontainers.image.created": "2023-03-16T09:17:23Z",
+      "org.opencontainers.image.description": "Tiny Go webserver that prints OS information and HTTP request to output",
+      "org.opencontainers.image.documentation": "https://github.com/traefik/whoami",
+      "org.opencontainers.image.revision": "f3f17505276a40958d485ce530b695f0a8f35af6",
+      "org.opencontainers.image.source": "https://github.com/traefik/whoami",
+      "org.opencontainers.image.title": "whoami",
+      "org.opencontainers.image.url": "https://github.com/traefik/whoami",
+      "org.opencontainers.image.version": "1.9.0"
+    }
+  },
+  "NetworkSettings": {
+    "Bridge": "",
+    "SandboxID": "1bc92935a01fbaf2b4c46f1532b1cd04564682b7103cff359977ef68b264bd6c",
+    "HairpinMode": false,
+    "LinkLocalIPv6Address": "",
+    "LinkLocalIPv6PrefixLen": 0,
+    "Ports": {
+      "80/tcp": [
+        {
+          "HostIp": "0.0.0.0",
+          "HostPort": "32768"
+        },
+        {
+          "HostIp": "::",
+          "HostPort": "32768"
+        }
+      ]
+    },
+    "SandboxKey": "/var/run/docker/netns/1bc92935a01f",
+    "SecondaryIPAddresses": null,
+    "SecondaryIPv6Addresses": null,
+    "EndpointID": "501f705bb280c1c4f643dc5f40d64ece877fc64926940ee2a7a731004c48c61c",
+    "Gateway": "172.17.0.1",
+    "GlobalIPv6Address": "",
+    "GlobalIPv6PrefixLen": 0,
+    "IPAddress": "172.17.0.2",
+    "IPPrefixLen": 16,
+    "IPv6Gateway": "",
+    "MacAddress": "02:42:ac:11:00:02",
+    "Networks": {
+      "bridge": {
+        "IPAMConfig": null,
+        "Links": null,
+        "Aliases": null,
+        "NetworkID": "bd91e40033b7d954a045490a0cc5b9aa3c0c03fe2f5a9b4ba3c4b349e5875f87",
+        "EndpointID": "501f705bb280c1c4f643dc5f40d64ece877fc64926940ee2a7a731004c48c61c",
+        "Gateway": "172.17.0.1",
+        "IPAddress": "172.17.0.2",
+        "IPPrefixLen": 16,
+        "IPv6Gateway": "",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "MacAddress": "02:42:ac:11:00:02",
+        "DriverOpts": null
+      }
+    }
+  }
+}
