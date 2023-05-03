@@ -4,8 +4,7 @@ use std::{sync::{Mutex, Arc}, thread::scope};
 use std::process::Command;
 use rs_docker::{Docker, image::Image};
 use ureq::{Agent, AgentBuilder};
-use std::time::Duration;
-
+use chrono::{DateTime,  Utc};
 fn main() {
     let mut docker = match Docker::connect("unix:///var/run/docker.sock") {
     	Ok(docker) => docker,
@@ -17,9 +16,10 @@ fn main() {
         Err(e) => { panic!("{}", e); }
     };
 
-    aggregate_and_pull_images(3);
-    aggregate_ports();
-    run_nuclei();
+    run_pipeline(1);
+    run_pipeline(2);
+    run_pipeline(3);
+    run_pipeline(4);
 
     // let cores = 10;
     // let image_queue = Arc::new(Mutex::new(images));
@@ -38,6 +38,12 @@ fn main() {
     //         });
     //     }
     // });
+}
+
+fn run_pipeline(pagenum: u32){
+    aggregate_and_pull_images(pagenum);
+    aggregate_ports();
+    run_nuclei();
 }
 
 fn analyze_image(selected: Image) {
@@ -95,12 +101,14 @@ fn aggregate_ports(){
 }
 
 fn run_nuclei(){
+    let filename = format!("results_{}", Utc::now());
     let output = Command::new("bash")
     .arg("-c")
-    .arg("nuclei -l ports.txt")
+    .arg(format!("nuclei -l ports.txt -je {}", filename))
     .output()
-    .expect("failed to aggregate ports");
+    .expect("failed to run nuclei");
 
-    let h = String::from_utf8(output.stdout).unwrap();
-    println!("{}", h);
+    // let h = String::from_utf8(output.stdout).unwrap();
+    println!("finished running nuclei on batch");
 }
+
