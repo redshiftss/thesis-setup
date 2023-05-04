@@ -11,10 +11,10 @@ fn main() {
         Err(e) => { panic!("{}", e); }
     };
 
-    let images = match docker.get_images(true) {
-        Ok(images) => images,
-        Err(e) => { panic!("{}", e); }
-    };
+    // let images = match docker.get_images(true) {
+    //     Ok(images) => images,
+    //     Err(e) => { panic!("{}", e); }
+    // };
 
     run_pipeline(1);
     run_pipeline(2);
@@ -44,6 +44,7 @@ fn run_pipeline(pagenum: u32){
     aggregate_and_pull_images(pagenum);
     aggregate_ports();
     run_nuclei();
+    cleanup();
 }
 
 fn analyze_image(selected: Image) {
@@ -101,14 +102,26 @@ fn aggregate_ports(){
 }
 
 fn run_nuclei(){
-    let filename = format!("results_{}", Utc::now());
-    let output = Command::new("bash")
+    let filename = format!("results_{}.json", Utc::now());
+    println!("filename: {}", filename);
+    Command::new("bash")
     .arg("-c")
-    .arg(format!("nuclei -l ports.txt -je {}", filename))
-    .output()
+    .arg(format!("~/go/bin/nuclei -l ports.txt  -ni -je {}", filename))
+    .status()
     .expect("failed to run nuclei");
 
     // let h = String::from_utf8(output.stdout).unwrap();
-    println!("finished running nuclei on batch");
 }
 
+fn cleanup() {
+    Command::new("bash")
+    .arg("-c")
+    .arg("docker stop $(docker ps -a -q)")
+    .status()
+    .expect("failed to run nuclei");
+    Command::new("bash")
+    .arg("-c")
+    .arg("docker rm $(docker ps -a -q)")
+    .status()
+    .expect("failed to run nuclei");
+}
