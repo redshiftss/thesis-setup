@@ -43,7 +43,7 @@ fn main() {
 fn run_pipeline(pagenum: u32){
     aggregate_and_pull_images(pagenum);
     aggregate_ports();
-    run_nuclei();
+    run_nuclei(pagenum);
     cleanup();
 }
 
@@ -101,8 +101,8 @@ fn aggregate_ports(){
     println!("wrote ports to file...")
 }
 
-fn run_nuclei(){
-    let filename = format!("results_{}.json", Utc::now());
+fn run_nuclei(pagenum: u32){
+    let filename = format!("results_{}_{}.json", Utc::now(), pagenum);
     println!("filename: {}", filename);
     Command::new("bash")
     .arg("-c")
