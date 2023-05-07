@@ -1,1 +1,6 @@
 /target
+*.json
+ports.txt
+*.dump
+/trivy
+/nuclei
