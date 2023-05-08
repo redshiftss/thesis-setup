@@ -109,15 +109,15 @@ fn aggregate_and_pull_images(pagenum: u32) -> Vec<MyImage> {
     thread::sleep(Duration::from_secs(1));
 
     let output = Command::new("bash")
-    .arg("-c") 
+    .arg("-c")
     .arg("docker ps --format \"{{.Image}} {{.Ports}}\" | awk -F \'->\' \'{print $1}\'")
     .output()
     .expect("failed to aggregate ports");
 
     let mut imgs = Vec::new();
-        
+
     let str = String::from_utf8(output.stdout).unwrap();
-    
+
     let lines = str.split("\n");
 
     for line in lines {
@@ -139,7 +139,7 @@ fn aggregate_and_pull_images(pagenum: u32) -> Vec<MyImage> {
 
 fn aggregate_ports(){
     Command::new("bash")
-    .arg("-c") 
+    .arg("-c")
     .arg("docker ps --format \"{{.Ports}}\" | awk -F \'->\' \'{print $1}\' > ports.txt")
     .output()
     .expect("failed to aggregate ports");
@@ -167,12 +167,17 @@ fn cleanup() {
     .arg("-c")
     .arg("docker stop $(docker ps -a -q)")
     .status()
-    .expect("failed to run nuclei");
+    .expect("failed to clean up");
     Command::new("bash")
     .arg("-c")
     .arg("docker rm $(docker ps -a -q)")
     .status()
-    .expect("failed to run nuclei");
+    .expect("failed to clean up");
+    Command::new("bash")
+    .arg("-c")
+    .arg("docker image prune -a")
+    .status()
+    .expect("failed to clean up");
 }
 
 fn aggregate_results_nuclei(mut results : HashMap<String, ImageReport>, ports : Vec<MyImage>, file : String, pagenum : u32) {
@@ -184,7 +189,7 @@ fn aggregate_results_nuclei(mut results : HashMap<String, ImageReport>, ports : 
         let vuln = item.as_object().unwrap();
         let hostip = &vuln["host"].to_string().replace("\"", "");
         let severity = &vuln["info"]["severity"];
-    
+
         let name = &vuln["info"]["name"];
 
         let mut corresponding_image : String = "".to_string();
@@ -212,13 +217,13 @@ fn aggregate_results_nuclei(mut results : HashMap<String, ImageReport>, ports : 
             }
         }
     }
-    
+
     for r in results {
         let mut number_of_info = 0;
         let mut number_of_low = 0;
         let mut number_of_medium = 0;
         let mut number_of_high = 0;
-        
+
         for vuln in  r.1.vuln_list_dynamic {
             match vuln.severity.as_str() {
                 "\"info\"" => number_of_info +=1 ,
@@ -236,7 +241,7 @@ fn aggregate_results_nuclei(mut results : HashMap<String, ImageReport>, ports : 
                 .create(true)
                 .open(format!("results_{}.txt", pagenum))
                 .unwrap();
-    
+
             if let Err(e) = writeln!(file, "{}", r) {
                 eprintln!("Couldn't write to file: {}", e);
             }
@@ -249,13 +254,20 @@ fn aggregate_results_trivy(mut results : HashMap<String, ImageReport>, file : St
     let jsons = trivy_dump.trim().split("\n\n").collect::<Vec<_>>();
     for json in jsons {
         let json_object : Value = serde_json::from_str(&json).unwrap();
+        if json_object["Results"].as_array().is_none() {
+            eprintln!("trivy json malformed: {:?}", &json);
+            continue
+        }
         let ress  = &json_object["Results"].as_array().unwrap()[0];
+        if ress["Vulnerabilities"].as_array().is_none() {
+           continue;
+        }
         let vulns = ress["Vulnerabilities"].as_array().unwrap();
 
         let img_name =  &json_object["ArtifactName"].to_string().replace("\"", "");
-        
+
         for vuln in vulns.iter() {
-            
+
             let name = &vuln["VulnerabilityID"];
             let severity = &vuln["Severity"];
 
@@ -263,7 +275,7 @@ fn aggregate_results_trivy(mut results : HashMap<String, ImageReport>, file : St
                 Entry::Occupied(mut entry) => {
                     let ir = entry.get_mut();
                     ir.vuln_list_static.push(Vulnerability { severity: severity.to_string(), name: name.to_string() });
-                }  
+                }
                 Entry::Vacant(entry) => {
                     let mut statvec = Vec::new();
                     statvec.push(Vulnerability { severity: severity.to_string(), name: name.to_string() });
@@ -279,7 +291,7 @@ fn aggregate_results_trivy(mut results : HashMap<String, ImageReport>, file : St
         let mut number_of_low = 0;
         let mut number_of_medium = 0;
         let mut number_of_high = 0;
-        
+
         for vuln in  r.1.vuln_list_static {
             match vuln.severity.as_str() {
                 "\"LOW\"" =>  number_of_low +=1,
@@ -296,7 +308,7 @@ fn aggregate_results_trivy(mut results : HashMap<String, ImageReport>, file : St
                 .create(true)
                 .open(format!("results_{}.txt", pagenum))
                 .unwrap();
-    
+
             if let Err(e) = writeln!(file, "{}", r) {
                 eprintln!("Couldn't write to file: {}", e);
             }
