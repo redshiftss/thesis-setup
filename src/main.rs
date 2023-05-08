@@ -175,7 +175,7 @@ fn cleanup() {
     .expect("failed to clean up");
     Command::new("bash")
     .arg("-c")
-    .arg("docker image prune -a")
+    .arg("docker image prune -a -f")
     .status()
     .expect("failed to clean up");
 }
