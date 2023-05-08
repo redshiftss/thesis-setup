@@ -1,39 +1,50 @@
 extern crate rs_docker;
 
-use std::{sync::{Mutex, Arc}, thread::{scope, self}, time::{self, UNIX_EPOCH, Duration}, fs::{self, File}, io::Write};
+use std::{sync::{Mutex, Arc}, thread::{scope, self}, time::{self, UNIX_EPOCH, Duration}, fs::{self, File, OpenOptions}, io::Write, collections::{HashMap, hash_map::Entry}, ops::Deref, slice::range};
 use std::process::Command;
 use std::time::SystemTime;
 
+use rs_docker::image::Image;
+use serde_json::Value;
+
 fn main() {
-    run_pipeline(1);
+    let i = 1;
+    while i <= 200 {
+        run_pipeline(i);
+    }
 }
 
 fn run_pipeline(pagenum: u32){
     cleanup();
     let imgs = aggregate_and_pull_images(pagenum);
+    let cp = imgs.clone();
     aggregate_ports();
-    run_nuclei(pagenum);
-    run_trivy(pagenum, imgs);
+    let nucleifile = run_nuclei(pagenum);
+    let trivyfile = run_trivy(pagenum, imgs);
+    let mut res = HashMap::new();
+    aggregate_results_nuclei(res.clone(), cp, nucleifile, pagenum);
+    aggregate_results_trivy(res,  trivyfile, pagenum);
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct MyImage {
     name : String,
     ips : Vec<String>
 }
 
+#[derive(Clone, Debug)]
 struct Vulnerability {
     severity : String,
-    cvenum : String,
+    name : String,
 }
 
+#[derive(Clone, Debug)]
 struct ImageReport {
-    image_name : String,
     vuln_list_static : Vec<Vulnerability>,
     vuln_list_dynamic : Vec<Vulnerability>
 }
 
-fn run_trivy(pagenum : u32, images : Vec<MyImage>) {
+fn run_trivy(pagenum : u32, images : Vec<MyImage>) -> String {
     let mut res = String::new();
     println!("{:?}", images);
 
@@ -43,7 +54,7 @@ fn run_trivy(pagenum : u32, images : Vec<MyImage>) {
                 .arg(format!("trivy image -f json {}", image.name))
                 .output()
                 .expect("failed to execute trivy");
-        let h = format!("{},\n\n", String::from_utf8(output.stdout).unwrap());
+        let h = format!("{}\n", String::from_utf8(output.stdout).unwrap());
         res.push_str(&h);
     }
 
@@ -53,9 +64,11 @@ fn run_trivy(pagenum : u32, images : Vec<MyImage>) {
         .expect("Time went backwards");
 
     let filename = format!("trivy/results_{:?}_{}.json", since_the_epoch, pagenum);
+    let fil = filename.clone();
 
     let mut file = File::create(filename).unwrap();
     file.write_all(res.as_bytes()).unwrap();
+    return fil;
 }
 
 fn aggregate_and_pull_images(pagenum: u32) -> Vec<MyImage> {
@@ -130,7 +143,7 @@ fn aggregate_ports(){
     println!("wrote ports to file...")
 }
 
-fn run_nuclei(pagenum: u32){
+fn run_nuclei(pagenum: u32) -> String{
     let start = SystemTime::now();
     let since_the_epoch = start
         .duration_since(UNIX_EPOCH)
@@ -143,6 +156,7 @@ fn run_nuclei(pagenum: u32){
     .arg(format!("~/go/bin/nuclei -l ports.txt -hm -ni -je {}", filename))
     .status()
     .expect("failed to run nuclei");
+    return filename;
 }
 
 fn cleanup() {
@@ -156,4 +170,127 @@ fn cleanup() {
     .arg("docker rm $(docker ps -a -q)")
     .status()
     .expect("failed to run nuclei");
+}
+
+fn aggregate_results_nuclei(mut results : HashMap<String, ImageReport>, ports : Vec<MyImage>, file : String, pagenum : u32) {
+    let nuclei_dump = fs::read_to_string(file).unwrap();
+    let json_object : Value = serde_json::from_str(&nuclei_dump).unwrap();
+    let json_array = json_object.as_array().unwrap();
+
+    for item in json_array.iter() {
+        let vuln = item.as_object().unwrap();
+        let hostip = &vuln["host"].to_string().replace("\"", "");
+        let severity = &vuln["info"]["severity"];
+    
+        let name = &vuln["info"]["name"];
+
+        let mut corresponding_image : String = "".to_string();
+
+        let ip = &hostip.to_string().replace("http://", "");
+
+
+        for img in ports.clone() {
+            if img.ips.contains(ip) {
+                // dbg!("a");
+                corresponding_image = img.name;
+            }
+        }
+
+        match results.entry(corresponding_image) {
+            Entry::Occupied(mut entry) => {
+                let ir = entry.get_mut();
+                ir.vuln_list_dynamic.push(Vulnerability { severity: severity.to_string(), name: name.to_string() })
+            },
+            Entry::Vacant(entry) => {
+                let mut dynvec = Vec::new();
+                dynvec.push(Vulnerability { severity: severity.to_string(), name: name.to_string()});
+                let r = ImageReport{ vuln_list_static: Vec::new(), vuln_list_dynamic: dynvec};
+                entry.insert(r);
+            }
+        }
+    }
+    
+    for r in results {
+        let mut number_of_info = 0;
+        let mut number_of_low = 0;
+        let mut number_of_medium = 0;
+        let mut number_of_high = 0;
+        
+        for vuln in  r.1.vuln_list_dynamic {
+            match vuln.severity.as_str() {
+                "\"info\"" => number_of_info +=1 ,
+                "\"low\"" =>  number_of_low +=1,
+                "\"medium\"" =>  number_of_medium +=1,
+                "\"high\"" =>  number_of_high +=1,
+                _ => (),
+            }
+        }
+        let r = format!("aggregated dynamic analysis results for image {}: info {}, low {}, medium {}, high {}", r.0, number_of_info, number_of_low, number_of_medium, number_of_high);
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(format!("results_{}.txt", pagenum))
+            .unwrap();
+
+        if let Err(e) = writeln!(file, "{}", r) {
+            eprintln!("Couldn't write to file: {}", e);
+        }
+    }
+}
+
+fn aggregate_results_trivy(mut results : HashMap<String, ImageReport>, file : String, pagenum : u32) {
+    let trivy_dump = fs::read_to_string(file).unwrap();
+    let jsons = trivy_dump.trim().split("\n\n").collect::<Vec<_>>();
+    for json in jsons {
+        let json_object : Value = serde_json::from_str(&json).unwrap();
+        let ress  = &json_object["Results"].as_array().unwrap()[0];
+        let vulns = ress["Vulnerabilities"].as_array().unwrap();
+
+        let img_name =  &json_object["ArtifactName"].to_string().replace("\"", "");
+        
+        for vuln in vulns.iter() {
+            
+            let name = &vuln["VulnerabilityID"];
+            let severity = &vuln["Severity"];
+
+            match results.entry(img_name.to_string()) {
+                Entry::Occupied(mut entry) => {
+                    let ir = entry.get_mut();
+                    ir.vuln_list_static.push(Vulnerability { severity: severity.to_string(), name: name.to_string() });
+                }  
+                Entry::Vacant(entry) => {
+                    let mut statvec = Vec::new();
+                    statvec.push(Vulnerability { severity: severity.to_string(), name: name.to_string() });
+                    entry.insert(ImageReport { vuln_list_static: statvec, vuln_list_dynamic: Vec::new() });
+                }
+            }
+        }
+    }
+
+    dbg!(results.clone());
+
+    for r in results {
+        let mut number_of_low = 0;
+        let mut number_of_medium = 0;
+        let mut number_of_high = 0;
+        
+        for vuln in  r.1.vuln_list_static {
+            match vuln.severity.as_str() {
+                "\"LOW\"" =>  number_of_low +=1,
+                "\"MEDIUM\"" =>  number_of_medium +=1,
+                "\"HIGH\"" =>  number_of_high +=1,
+                _ => (),
+            }
+        }
+        let r = format!("aggregated static analysis results for image {} : low {}, medium {}, high {}\n", r.0, number_of_low, number_of_medium, number_of_high);
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(format!("results_{}.txt", pagenum))
+            .unwrap();
+
+        if let Err(e) = writeln!(file, "{}", r) {
+            eprintln!("Couldn't write to file: {}", e);
+        }
+    }
 }
