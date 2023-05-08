@@ -1,6 +1,6 @@
 extern crate rs_docker;
 
-use std::{sync::{Mutex, Arc}, thread::{scope, self}, time::{self, UNIX_EPOCH, Duration}, fs::{self, File, OpenOptions}, io::Write, collections::{HashMap, hash_map::Entry}, ops::Deref, slice::range};
+use std::{sync::{Mutex, Arc}, thread::{scope, self}, time::{self, UNIX_EPOCH, Duration}, fs::{self, File, OpenOptions}, io::Write, collections::{HashMap, hash_map::Entry}, ops::Deref, path::Path, };
 use std::process::Command;
 use std::time::SystemTime;
 
@@ -8,9 +8,10 @@ use rs_docker::image::Image;
 use serde_json::Value;
 
 fn main() {
-    let i = 1;
-    while i <= 200 {
+    let mut i = 1;
+    while i <= 3 {
         run_pipeline(i);
+        i+=1;
     }
 }
 
@@ -22,8 +23,10 @@ fn run_pipeline(pagenum: u32){
     let nucleifile = run_nuclei(pagenum);
     let trivyfile = run_trivy(pagenum, imgs);
     let mut res = HashMap::new();
-    aggregate_results_nuclei(res.clone(), cp, nucleifile, pagenum);
-    aggregate_results_trivy(res,  trivyfile, pagenum);
+    if Path::new(&nucleifile).exists() {
+        aggregate_results_nuclei(res.clone(), cp, nucleifile, pagenum);
+        aggregate_results_trivy(res,  trivyfile, pagenum);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -225,15 +228,18 @@ fn aggregate_results_nuclei(mut results : HashMap<String, ImageReport>, ports : 
                 _ => (),
             }
         }
-        let r = format!("aggregated dynamic analysis results for image {}: info {}, low {}, medium {}, high {}", r.0, number_of_info, number_of_low, number_of_medium, number_of_high);
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(format!("results_{}.txt", pagenum))
-            .unwrap();
-
-        if let Err(e) = writeln!(file, "{}", r) {
-            eprintln!("Couldn't write to file: {}", e);
+        if !r.0.is_empty(){
+            let r = format!("aggregated dynamic analysis results for image {}: info {}, low {}, medium {}, high {}", r.0, number_of_info, number_of_low, number_of_medium, number_of_high);
+            let mut file = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .create(true)
+                .open(format!("results_{}.txt", pagenum))
+                .unwrap();
+    
+            if let Err(e) = writeln!(file, "{}", r) {
+                eprintln!("Couldn't write to file: {}", e);
+            }
         }
     }
 }
@@ -282,15 +288,18 @@ fn aggregate_results_trivy(mut results : HashMap<String, ImageReport>, file : St
                 _ => (),
             }
         }
-        let r = format!("aggregated static analysis results for image {} : low {}, medium {}, high {}\n", r.0, number_of_low, number_of_medium, number_of_high);
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(format!("results_{}.txt", pagenum))
-            .unwrap();
-
-        if let Err(e) = writeln!(file, "{}", r) {
-            eprintln!("Couldn't write to file: {}", e);
+        if !r.0.is_empty(){
+            let r = format!("aggregated static analysis results for image {} : low {}, medium {}, high {}", r.0, number_of_low, number_of_medium, number_of_high);
+            let mut file = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .create(true)
+                .open(format!("results_{}.txt", pagenum))
+                .unwrap();
+    
+            if let Err(e) = writeln!(file, "{}", r) {
+                eprintln!("Couldn't write to file: {}", e);
+            }
         }
     }
 }
