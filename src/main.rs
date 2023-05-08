@@ -9,7 +9,7 @@ use serde_json::Value;
 
 fn main() {
     let mut i = 1;
-    while i <= 3 {
+    while i <= 200 {
         run_pipeline(i);
         i+=1;
     }
