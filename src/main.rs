@@ -23,9 +23,13 @@ fn run_pipeline(pagenum: u32){
     let nucleifile = run_nuclei(pagenum);
     let trivyfile = run_trivy(pagenum, imgs);
     let mut res = HashMap::new();
-    if Path::new(&nucleifile).exists() {
-        aggregate_results_nuclei(res.clone(), cp, nucleifile, pagenum);
-        aggregate_results_trivy(res,  trivyfile, pagenum);
+    if Path::new(&nucleifile).exists() && Path::new(&trivyfile).exists() {
+        let x = fs::metadata(&nucleifile).unwrap().len();
+        let y = fs::metadata(&trivyfile).unwrap().len();
+        if x > 5 && y > 5 {
+            aggregate_results_nuclei(res.clone(), cp, nucleifile, pagenum);
+            aggregate_results_trivy(res,  trivyfile, pagenum);
+        }
     }
 }
 
@@ -159,6 +163,7 @@ fn run_nuclei(pagenum: u32) -> String{
     .arg(format!("~/go/bin/nuclei -l ports.txt -hm -ni -je {}", filename))
     .status()
     .expect("failed to run nuclei");
+
     return filename;
 }
 
@@ -247,6 +252,8 @@ fn aggregate_results_nuclei(mut results : HashMap<String, ImageReport>, ports : 
             }
         }
     }
+
+
 }
 
 fn aggregate_results_trivy(mut results : HashMap<String, ImageReport>, file : String, pagenum : u32) {
@@ -267,7 +274,6 @@ fn aggregate_results_trivy(mut results : HashMap<String, ImageReport>, file : St
         let img_name =  &json_object["ArtifactName"].to_string().replace("\"", "");
 
         for vuln in vulns.iter() {
-
             let name = &vuln["VulnerabilityID"];
             let severity = &vuln["Severity"];
 
@@ -291,12 +297,14 @@ fn aggregate_results_trivy(mut results : HashMap<String, ImageReport>, file : St
         let mut number_of_low = 0;
         let mut number_of_medium = 0;
         let mut number_of_high = 0;
+        let mut number_of_critical = 0;
 
         for vuln in  r.1.vuln_list_static {
             match vuln.severity.as_str() {
                 "\"LOW\"" =>  number_of_low +=1,
                 "\"MEDIUM\"" =>  number_of_medium +=1,
                 "\"HIGH\"" =>  number_of_high +=1,
+                "\"CRITICAL\"" => number_of_critical +=1,
                 _ => (),
             }
         }
